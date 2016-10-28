@@ -24,11 +24,7 @@
       [`(,M1 ,M2) (union (FV M1) (FV M2))])))
 
 
-; '(x)
 (FV `x)
-; '(y x)
 (FV `(x (y x)))
-; '(y)
 (FV `(lambda (x) (x y)))
-; '(z)
 (FV `(z (lambda (z) z)))
