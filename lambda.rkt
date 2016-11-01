@@ -19,9 +19,9 @@
 (define FV
   (lambda (expr)
     (pmatch expr
-      [`,X (guard (atom? X)) `(,X)]
-      [`(lambda (,X) ,M) (remv X (FV M))]
-      [`(,M1 ,M2) (union (FV M1) (FV M2))])))
+            [`,X (guard (atom? X)) `(,X)]
+            [`(lambda (,X) ,M) (remv X (FV M))]
+            [`(,M1 ,M2) (union (FV M1) (FV M2))])))
 
 
 ; '(x)
@@ -32,3 +32,12 @@
 (FV `(lambda (x) (x y)))
 ; '(z)
 (FV `(z (lambda (z) z)))
+
+
+
+
+
+
+
+
+
