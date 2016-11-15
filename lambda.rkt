@@ -7,13 +7,12 @@
     (and (not (pair? x)) (not (null? x)))))
 
                          
-(define (union set1 set2)
-  (cond
-    ((eq? set1 null) set2)
-     ((eq? set2 null) set1)
-     (else (if (not (memv (car set1) set2))
-                       (cons (car set1) (union (cdr set1) (remv (car set1) set2)))
-                       (union (cdr set1) set2)))))
+(define union
+  (lambda (ls1 ls2)
+    (cond
+      [(null? ls1) ls2]
+      [(memv (car ls1) ls2) (union (cdr ls1) ls2)]
+      [else (cons (car ls1) (union (cdr ls1) ls2))])))
 
 
 (define FV
@@ -32,12 +31,3 @@
 (FV `(lambda (x) (x y)))
 ; '(z)
 (FV `(z (lambda (z) z)))
-
-
-
-
-
-
-
-
-
