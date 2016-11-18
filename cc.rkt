@@ -1,5 +1,6 @@
 #lang scheme
 
+;; CC Machine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Syntax recognizers, extractors, and makers
 
@@ -127,7 +128,7 @@
           ;; Rule 6
           [(and (primapp? h)
                 (hole? (primapp-arg1 h)))
-           (make-state (make-primapp (primapp-op h) (primapp-arg2 h) m)
+           (make-state (make-primapp (primapp-op h) m (primapp-arg2 h))
                        (replace e h hole))]
           [(and (primapp? h)
                 (hole? (primapp-arg2 h)))
@@ -146,6 +147,7 @@
 ;;  (replace (make-app hole 5) hole (make-func 'x 'x))  = (make-app (make-func 'x 'x) 5)
 ;;  (replace (make-app (make-func 'x hole) 5) (make-func 'x hole) hole)  = (make-app hole 5)
 
+;; search for old in e and replace it (old) by new
 (define (replace e old new)
   (cond
    [(equal? e old) new]
@@ -297,3 +299,9 @@
                                   (+ y y)))
                   1))
 (show-eval (make-state example4 hole))
+
+(define example5 (make-app '(lam x
+                                 (+ 10 (- 11 x)))
+                           '((lam z
+                                  (+ z z)) 12)))
+(show-eval (make-state example5 hole))
