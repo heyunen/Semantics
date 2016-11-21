@@ -41,7 +41,7 @@
 (define (make-app f a)
   (list f a))
 
-;; Primitive operation
+;; 
 (define (primapp? m)
   (and (list? m)
        (let ([o (list-ref m 0)])
