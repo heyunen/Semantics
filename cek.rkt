@@ -76,28 +76,28 @@
   (lambda (mtK port write?)
     (fprintf port "mt")))
 
-;(define-struct funK (v k))
+;(define-struct funK (vcl k))
 (define-struct funK(vcl k)
   #:property prop:custom-write
   (lambda (funK port write?)
     (fprintf port (if write? "<~s, ~s>" "<~a, ~a>")
              (funK-vcl funK) (funK-k funK))))
 
-;(define-struct argK (n k))
+;(define-struct argK (ncl k))
 (define-struct argK(ncl k)
   #:property prop:custom-write
   (lambda (argK port write?)
     (fprintf port (if write? "<~s, ~s>" "<~a, ~a>")
              (argK-ncl argK) (argK-k argK))))
 
-;(define-struct primargK (o n k))
+;(define-struct primargK (o ncl k))
 (define-struct primargK(o ncl k)
   #:property prop:custom-write
   (lambda (primargK port write?)
     (fprintf port (if write? "<~s, ~s, ~s>" "<~a, ~a, ~a>")
              (primargK-o primargK) (primargK-ncl primargK) (primargK-k primargK))))
 
-;(define-struct primK (o v k))
+;(define-struct primK (o vcl k))
 (define-struct primK(o vcl k)
   #:property prop:custom-write
   (lambda (primK port write?)
