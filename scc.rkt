@@ -1,7 +1,7 @@
 #lang scheme
 (require "pmatch.rkt")
 
-;; SECD Machine
+;; SECD Machine (PLT Redex)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Syntax recognizers, extractors, and makers
 ;;
@@ -141,9 +141,8 @@
       ;; secd LA   
       [(and
         (pair? control)
-        (app? (car control)))  
-       (make-state stack env (append (append (car control) '(ap)) (cdr control)) dump)]
-       ;(make-state stack env (append (append (list (app-func (car control)) (app-arg (car control))) '(ap)) (cdr control)) dump)]
+        (app? (car control)))
+       (make-state stack env (append (append (list (app-func (car control)) (app-arg (car control))) '(ap)) (cdr control)) dump)]
       ;; secd 4
       [(and (pair? control)
             (func? (car control)))
@@ -236,7 +235,7 @@
                                    (lam d 0))
 				  (lam d (+ x (s (- x 1)))))))))
 (define example3 (make-app sum 1))
-(show-eval (make-state '() '() example3 '()))
+;(show-eval (make-state '() '() example3 '()))
 
 (define example4 (make-app
                   (make-app '(lam f
@@ -251,3 +250,4 @@
                            '((lam z
                                   (+ z z)) 12)))
 (show-eval (make-state '() '() example5 '()))
+
