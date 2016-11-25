@@ -1,16 +1,10 @@
 #lang scheme
+(require "pmatch.rkt")
 
-;; SCC Machine
+;; SECD Machine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Syntax recognizers, extractors, and makers
-
-;; Value
-(define (val? m)
-  (or (number? m)
-      (func? m)
-      (symbol? m)))
-
-;; Function
+;;
 (define (func? m)
   (and (list? m)
        (eq? 'lam (list-ref m 0))))
@@ -26,7 +20,7 @@
     (error 'make-func "variable is not a symbol: ~e" var))
   (list 'lam var body))
 
-;; Application
+;;
 (define (app? m)
   (and (list? m)
        (not (func? m))
@@ -41,11 +35,19 @@
 (define (make-app f a)
   (list f a))
 
-;; 
+;;
+(define (o? o)
+  (member o '(+ - =)))
+
 (define (primapp? m)
   (and (list? m)
-       (let ([o (list-ref m 0)])
-         (member o '(+ - =)))))
+       (> (length m) 2)
+       (let ([o (list-ref m 0)]
+             [arg1 (list-ref m 1)]
+             [arg2 (list-ref m 2)])
+         (and (member o '(+ - =))
+              (not (member arg1 '(+ - =)))
+              (not (member arg2 '(+ - =)))))))
 
 (define (primapp-op m)
   (list-ref m 0))
@@ -61,151 +63,6 @@
     (error 'make-primapp "operation is not +, -, or =: ~e" o))
   (list o a1 a2))
 
-;; Hole
-(define hole '*)
-
-(define (hole? m)
-  (eq? m hole))
-
-;; State
-(define-struct state (m e))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; The one-step evaluator
-
-(define (next-state s)
-  (let ([m (state-m s)]
-        [e (state-e s)])
-    (cond
-      ;; scc1
-      [(app? m)
-       (make-state (app-func m)
-                   (replace e hole (make-app hole (app-arg m))))]
-      ;; scc2
-      [(primapp? m)
-       (make-state (primapp-arg1 m)
-                   (replace e hole (make-primapp (primapp-op m) hole (primapp-arg2 m))))]
-      [(val? m)
-       (let ([h (hole-expression e)])
-         (cond
-           ;; scc3
-           [(and (func? (app-func h))
-                 (hole? (app-arg h)))
-            (make-state (substitute (func-body (app-func h))
-                                    (func-var (app-func h))
-                                    m)
-                        (replace e h hole))]
-           ;; scc4
-           [(and (app? h))
-                 (hole? (app-func h))
-            (make-state (app-arg h) (replace e h (make-app m hole)))]          
-           ;; scc5
-           [(and (primapp? h)
-                 (hole? (primapp-arg2 h)))
-            (make-state (apply-op (primapp-op h) (primapp-arg1 h) m) (replace e h hole))]
-           ;; scc6
-           [(and (primapp? h)
-                 (hole? (primapp-arg1 h)))
-            (make-state (primapp-arg2 h) (replace e h (make-primapp (primapp-op h) m hole)))]
-          ;; Error
-          [else (error 'next-state "no recognized context around hole: ~e" e)]))]
-     ;; Error
-     [else (error 'next-state "stuck: ~e" m)])))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Context replacer
-
-;; Puts a hole in place of a sub-context, or a context of expression
-;; in place of a hole.
-;;  (replace (make-app hole 5) hole (make-func 'x 'x))  = (make-app (make-func 'x 'x) 5)
-;;  (replace (make-app (make-func 'x hole) 5) (make-func 'x hole) hole)  = (make-app hole 5)
-
-;; search for old in e and replace it (old) by new
-(define (replace e old new)
-  (cond
-   [(equal? e old) new]
-   [(app? e) (make-app
-              (replace (app-func e) old new)
-              (replace (app-arg e) old new))]
-   [(primapp? e) (make-primapp
-                  (primapp-op e)
-                  (replace (primapp-arg1 e) old new)
-                  (replace (primapp-arg2 e) old new))]
-   [(func? e) (make-func (func-var e)
-                         (replace (func-body e) old new))]
-   [(number? e) e]
-   [(symbol? e) e]
-   [else (error 'replace "ill-formed expression: ~e" e)]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Context extractor
-
-;; Gets the expression in E that wraps a hole, or returns #f
-;;  if there's no wrapped hole in the expression.
-;; Examples:
-;;  (hole-expression (make-app hole 10)) = (make-app hole 10)
-;;  (hole-expression (make-app 12 (make-app hole 10))) = (make-app hole 10)
-;;  (hole-expression (make-app 0 10)) = #f
-;;  (hole-expression hole) = #f
-
-(define (hole-expression e)
-  (cond
-    [(app? e)
-     (cond
-       ;; ([] M) or (M [])
-       [(or (hole? (app-func e)) (hole? (app-arg e))) e]
-       [else
-        (or (hole-expression (app-func e))
-            (hole-expression (app-arg e)))])]
-    [(primapp? e)
-     (cond
-       ;; (o [] M) or (o M [])
-       [(or (hole? (primapp-arg1 e)) (hole? (primapp-arg2 e))) e]
-       [else
-        (or (hole-expression (primapp-arg1 e))
-            (hole-expression (primapp-arg2 e)))])]
-    [else #f]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Substitute m[x <- v]
-
-(define (substitute m x v)
-  (cond
-    [(eq? m x) v]
-    [(app? m) (make-app (substitute (app-func m) x v)
-                        (substitute (app-arg m) x v))]
-    [(primapp? m) (make-primapp (primapp-op m)
-                                (substitute (primapp-arg1 m) x v)
-                                (substitute (primapp-arg2 m) x v))]
-   [(func? m)
-    (if (eq? x (func-var m))
-        m
-        ;; rename formal var, if necessary
-        (let ([m2 (if (member (func-var m) (free-vars v null))
-                      ;; rename
-                      (let ([v2 (gensym)])
-                        (make-func v2 (substitute (func-body m) (func-var m) v2)))
-                      ;; no rename needed
-                      m)])
-          (make-func (func-var m2)
-                     (substitute (func-body m2) x v))))]
-   [(number? m) m]
-   [(symbol? m) m]
-   [else (error 'substitute "ill-formed expression: ~e" m)]))
-
-(define (free-vars m bound)
-  (cond
-    [(symbol? m) (if (memq m bound)
-                     null
-                     (list m))]
-    [(app? m) (append (free-vars (app-func m) bound)
-                      (free-vars (app-arg m) bound))]
-    [(primapp? m) (append (free-vars (primapp-arg1 m) bound)
-                          (free-vars (primapp-arg2 m) bound))]
-    [(func? m) (free-vars (func-body m)
-                          (cons (func-var m) bound))]
-    [else null]))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The delta function
 
@@ -219,15 +76,132 @@
    [else (error 'apply-op "unrecognized op: ~e" o)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Environments
+
+(define empty null)
+
+(define (empty？ a)
+  (null? a))
+
+;(define-struct bind (var v))
+(define-struct bind(var v)
+  #:property prop:custom-write
+  (lambda (bind port write?)
+    (fprintf port (if write? "<~s, ~s>" "<~a, ~a>")
+             (bind-var bind) (bind-v bind))))
+
+(define (lookup m e)
+  (cond
+    [(null? e) (error 'lookup "Couldn't find ~e in environment" m)]
+    [(eq? m (bind-var (car e)))  (bind-v (car e))]
+    [else (lookup m (cdr e))]))
+
+(define (extend e m v)
+  (cond
+    [(null? e) (list (make-bind m v))]
+    [(eq? m (bind-var (car e))) (cons (make-bind m v)
+                                      (cdr e))]
+    [else (cons (car e) (extend (cdr e) m v))]))
+
+;;
+(define-struct state (s e c d))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; The one-step evaluator
+
+(define (next-state state)
+  (let* ([stack (state-s state)]
+         [env (state-e state)]
+         [control (state-c state)]
+         [dump (state-d state)])
+    (cond 
+      ;; secd 1
+      [(and (pair? control)
+            (number? (car control)))
+       (make-state (cons (car control) stack) env (cdr control) dump)]
+      ;; secd PA
+      [(primapp? control)
+       (make-state stack env (list (primapp-arg1 control) (primapp-arg2 control) (primapp-op control)) dump)]      
+      [(and (pair? control)
+            (list? (car control))
+            (primapp? (car control)))
+       (make-state stack env
+                   (append (list (primapp-arg1 (car control)) (primapp-arg2 (car control)) (primapp-op (car control))) (cdr control))
+                   dump)]
+      ;; secd 3
+      [(and (not (null? control))
+            (> (length stack) 1)
+            (number? (car stack))
+            (number? (cadr stack))
+            (o? (car control)))
+       (make-state (cons (apply-op (car control)
+                                   (cadr stack)
+                                   (car stack)) (cddr stack))
+                   env (cdr control) dump)]
+      ;; secd LA   
+      [(and
+        (pair? control)
+        (app? (car control)))  
+       (make-state stack env (append (append (car control) '(ap)) (cdr control)) dump)]
+       ;(make-state stack env (append (append (list (app-func (car control)) (app-arg (car control))) '(ap)) (cdr control)) dump)]
+      ;; secd 4
+      [(and (pair? control)
+            (func? (car control)))
+       (make-state (cons (list (car control) env) stack) env (cdr control) dump)]
+      ;; secd 5
+      [(and (> (length stack) 1)
+            (pair? (cadr stack))
+            (func? (caadr stack))
+            (null? control))
+       (make-state '() (extend (cadadr stack) (func-var (caadr stack)) (car stack))
+                   (list (func-body (caadr stack))) (list (cddr stack) env control dump))]
+      [(and (> (length stack) 1)
+            (pair? (cadr stack))
+            (func? (caadr stack))
+            (eq? (car control) 'ap))
+       (make-state '() (extend (cadadr stack) (func-var (caadr stack)) (car stack))
+                   (list (func-body (caadr stack))) (list (cddr stack) env (cdr control) dump))]
+      ;; secd 6
+      [(null? control)
+       (make-state (cons (car stack) (list-ref dump 0)) (list-ref dump 1) (list-ref dump 2)  (list-ref dump 3))]  
+      ;; secd 2
+      [(symbol? (car control))
+       (make-state (cons (lookup (car control) env) stack) env (cdr control) dump)]
+      )))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Substitute exp[x <- y]
+
+(define substitute
+  (lambda (x y exp)
+    (pmatch exp
+            [`,a (guard (symbol? a)) (if (eq? a x)
+                                       y
+                                       exp)]
+            [`(lambda (,v) ,b) (if (eq? x v)
+                                   exp
+                                   (let* ([$v (gensym v)]
+                                          [$b (substitute v $v b)]
+                                          [$$b (substitute x y $b)])
+                                     `(lambda (,$v) ,$$b)))]
+            [`(,rator, rand) `(,(substitute x y rator) ,(substitute x y rand))])))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The evaluation function:
 
+(print-struct #t)
+
 (define (print-state s)
-  (printf "<~a, ~a>" (state-m s) (state-e s)))
+  (printf "<~a, ~a, ~a, ~a>" (state-s s) (state-e s) (state-c s) (state-d s)))
 
 (define (show-eval s)
-  (if (and (val? (state-m s))
-	   (hole? (state-e s)))
-
+  (if (and 
+       (empty? (state-c s))
+       (empty? (state-d s))
+       (or (and (number? (car (state-s s)))
+                (eq? (length (state-s s)) 1))
+           (func? (car (state-s s)))))
+      
       (begin
         (print-state s)
         (printf "~n~nDone~n~n"))
@@ -237,33 +211,32 @@
 	(print-state s)
 	(printf " |->~n~n")
 	(let ([s2 (next-state s)])
-	  ;; Keep going
-          (show-eval s2)))))
+	  ;; Keep going:
+	  (show-eval s2)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Tests
+;; Test
+(define example0 '(+ 1 1))
+(show-eval (make-state '() '() example0 '()))
 
 (define example1 '(+ (- 1 0) (+ 2 (- 4 3))))
-(show-eval (make-state example1 hole))
+(show-eval (make-state '() '() example1 '()))
 
 (define example2 '((lam y y) ((lam x (+ x 5)) 12)))
-(show-eval (make-state example2 hole))
+(show-eval (make-state '() '() example2 '()))
 
 (define Y '(lam f
 		(lam x
 		     (((lam g (f (lam x ((g g) x))))
 		       (lam g (f (lam x ((g g) x)))))
 		      x))))
-
 (define sum (make-app Y
 		      '(lam s
 			    (lam x
 				 (((= x 0)
                                    (lam d 0))
 				  (lam d (+ x (s (- x 1)))))))))
-
-(define example3 (make-app sum 3))
-(show-eval (make-state example3 hole))
+(define example3 (make-app sum 1))
+(show-eval (make-state '() '() example3 '()))
 
 (define example4 (make-app
                   (make-app '(lam f
@@ -271,11 +244,10 @@
                             '(lam y
                                   (+ y y)))
                   1))
-(show-eval (make-state example4 hole))
-
+(show-eval (make-state '() '() example4 '()))
 
 (define example5 (make-app '(lam x
                                  (+ 10 (- 11 x)))
                            '((lam z
                                   (+ z z)) 12)))
-(show-eval (make-state example5 hole))
+(show-eval (make-state '() '() example5 '()))
