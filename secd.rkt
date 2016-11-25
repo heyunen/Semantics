@@ -159,7 +159,7 @@
             (eq? (car control) 'ap))
        (make-state '() (extend (cadadr stack) (func-var (caadr stack)) (car stack))
                    (list (func-body (caadr stack))) (list (cddr stack) env (cdr control) dump))]
-      ;; <<(λX.M),E'> : cl : S, E, ap : C, D> ⇒ <<>, <X, M>: E', B, <S,E,C,D>>
+      ;; <<(λX.M),E'> : cl : S, E, ap : C, D> ⇒ <<>, <X, M> : E', B, <S,E,C,D>>
       [(and (> (length stack) 1)
             (pair? (car stack))
             (func? (caar stack))
