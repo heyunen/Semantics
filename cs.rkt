@@ -108,6 +108,7 @@
             (val? (app-arg e)))
        (let ([y (gensym 'δ)])
          (make-state (substitute (func-body (app-func e)) (func-var (app-func e)) y) (extend t y (app-arg e))))]
+      
       ;; cs!
       [(symbol? e)
        (let ([v (lookup t e)])
@@ -255,10 +256,3 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
-; (let ([x 12]) (begin (set! x 13) x))
-((lambda (x) ((lambda (y) x) (set! x (+ x 1)))) 12)
-
-(define example1 '((lam x ((lam y x) (set x (+ x 1)))) 12))
-(show-eval (make-state example1 empty))
-
-
