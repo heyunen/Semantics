@@ -159,7 +159,10 @@
       [(primapp? m)
        (make-state (make-closure (primapp-arg1 m) e)
                    (make-primargK (primapp-op m)
-                                  (make-closure (primapp-arg2 m) e) k) store)]    
+                                  (make-closure (primapp-arg2 m) e) k) store)]
+      ;; ceks7*
+      [(symbol? m)
+       (make-state (store-lookup (env-lookup m e) store) k store)]    
       ;; ceks3*
       [(and (val? m)
             (funK? k))
@@ -184,10 +187,7 @@
       [(and (val? m)
             (primargK? k))
        (make-state (primargK-ncl k)
-                   (make-primK (primargK-o k) cl (primargK-k k)) store)]
-      ;; ceks7*
-      [(symbol? m)
-       (make-state (store-lookup (env-lookup m e) store) k store)]        
+                   (make-primK (primargK-o k) cl (primargK-k k)) store)]    
       ;; ceks8*
       [(set? m)
        (make-state (make-closure (set-v m) e) (make-setK (make-closure (set-x m) e) k) store)]
@@ -197,7 +197,6 @@
        (let ([δ (env-lookup (closure-m (setK-c k)) (closure-e (setK-c k)))])
          (make-state (store-lookup δ store) (setK-k k) (store-extend store δ cl)))]
       [else (error 'next-state "stuck: ~e" cl)])))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environments
@@ -289,7 +288,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 (define example1 '(+ (- 1 0) (+ 2 (- 4 3))))
-;(show-eval (make-state (make-closure example1 empty) (make-mtK) empty))
+(show-eval (make-state (make-closure example1 empty) (make-mtK) empty))
 
 (define example2 '((lam y y) ((lam x (+ x 5)) 12)))
 (show-eval (make-state (make-closure example2 empty) (make-mtK) empty))
@@ -306,7 +305,7 @@
                                    (lam d 0))
 				  (lam d (+ x (s (- x 1)))))))))
 (define example3 (make-app sum 3))
-;(show-eval (make-state (make-closure example3 empty) (make-mtK) empty))
+(show-eval (make-state (make-closure example3 empty) (make-mtK) empty))
 
 (define example4 (make-app
                   (make-app '(lam f
@@ -315,19 +314,17 @@
                                   (+ y y)))
                   1))
 
-;(show-eval (make-state (make-closure example4 empty) (make-mtK) empty))
+(show-eval (make-state (make-closure example4 empty) (make-mtK) empty))
 
 (define example5 (make-app '(lam x
                                  (+ 10 (- 11 x)))
                            '((lam z
                                   (+ z z)) 12)))
-;(show-eval (make-state (make-closure example5 empty) (make-mtK) empty))
+(show-eval (make-state (make-closure example5 empty) (make-mtK) empty))
 
 (define example6 '((lam x ((lam y x) 1)) 12))
-;(show-eval (make-state (make-closure example6 empty) (make-mtK) empty))
+(show-eval (make-state (make-closure example6 empty) (make-mtK) empty))
 
 ;((lambda (x) ((lambda (y) x) (set! x (+ x 1)))) 12)
-;(define example1 '((lam x ((lam y x) (set x 1))) 12))
-;(define example1 '(+ (- 1 0) (+ 2 (- 4 3))))
-;(show-eval (make-state (make-closure example1 empty) (make-mtK) empty))
-
+(define example7 '((lam x ((lam y x) (set x (+ x 1)))) 12))
+(show-eval (make-state (make-closure example7 empty) (make-mtK) empty))
