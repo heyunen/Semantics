@@ -108,11 +108,10 @@
             (val? (app-arg e)))
        (let ([y (gensym 'δ)])
          (make-state (substitute (func-body (app-func e)) (func-var (app-func e)) y) (extend t y (app-arg e))))]
-      
       ;; cs!
       [(symbol? e)
        (let ([v (lookup t e)])
-         (make-state v (remove t e v)))]
+         (make-state v t))]
       ;; cs=
       [(set? e)
        (make-state void (extend t (set-x e) (set-v e)))]
@@ -164,13 +163,6 @@
     [(eq? var (bind-var (car t))) (cons (make-bind var val)
                                       (cdr t))]
     [else (cons (car t) (extend (cdr t) var val))]))
-
-(define (remove t var val)
-  (cond
-    [(null? t) null]
-    [(and (eq? var (bind-var (car t)))
-          (eq? val (bind-val (car t)))) (cdr t)]
-    [else (cons (car t) (remove (cdr t) var val))]))
 
 (define (all-vars t)
   (cond
