@@ -10,7 +10,6 @@
 ; the third argument to the function. For example, convert (add1 (f x )) to (f x (lambda (v) (add1 v))).
 ; Applications of primitive operations need no lifting.
 
-;;
 (define id
   (lambda (v) v))
 
