@@ -1,3 +1,11 @@
+; Informally, to convert a program to CPS:
+; 1. Add an extra argument k to each function.
+; 2. Instead of returning a result in a function, pass the result to k.
+; 3. Lift a nested function call out of its sub-expression by selecting a variable X to replace the function
+; call, wrapping the expression with (lambda (X) . . . ), and providing the resulting (lambda X ) as
+; the third argument to the function. For example, convert (add1 (f x )) to (f x (lambda (v) (add1 v))).
+; Applications of primitive operations need no lifting.
+
 (cps '(add1 (f x)))
 (f x (lambda (v0) (add1 v0)))
 
@@ -49,6 +57,7 @@
 
 (cps '(add1 (f x))) => (f x (lambda (v0) v0)) (wrong)
 
+
 (cps '(add1 (f x))) => (f x (lambda (v0) add1 v0)) (如何转换为这样？)
 
 并未使用过 ctx ，显示 ctx 出来观察一下。
@@ -78,6 +87,8 @@
         (pmatch exp
                 [`,x (guard (not (pair? x))) (ctx x)]
                 [`(lambda (,x) ,body) (ctx `(lambda (,x k) ,(cps1 body ctx0)))]
+
+                
                 [`(,func ,arg) (cps1 func (lambda (x)
                                             (cps1 arg (lambda (x^)
                                                         `(,x ,x^ (lambda (v0) ,(ctx `v0)))))))])))
@@ -85,6 +96,7 @@
 
 
 (cps '(add1 (f x))) => '(f x (lambda (v0) (add1 v0 (lambda (v0) v0)))) (wrong)
+
 (cps '(add1 (f x))) => '(f x (lambda (v0) (add1 v0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
