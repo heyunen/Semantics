@@ -84,7 +84,8 @@
     (cps1 exp id)))
 
 
-(cps '(add1 (f x))) => '(f x (lambda (v0) (add1 v0 (lambda (v0) v0))))
+(cps '(add1 (f x))) => '(f x (lambda (v0) (add1 v0 (lambda (v0) v0)))) (wrong)
+(cps '(add1 (f x))) => '(f x (lambda (v0) (add1 v0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -147,7 +148,6 @@
     (cps1 exp id)))
 
 ;;; tests
-
 (cps 'x)
 ; x
 
