@@ -136,15 +136,15 @@
 (define delta-b1?
   (lambda (x) (memq x `(add1 sub1 zero?))))
 
-(define new-var
-  (let ([n -1])
-    (lambda ()
-      (set! n (+ 1 n))
-      (string->symbol
-       (string-append "v" (number->string n))))))
 
 (define cps
   (lambda (exp)
+    (define new-var
+      (let ([n -1])
+        (lambda ()
+          (set! n (+ 1 n))
+          (string->symbol
+           (string-append "v" (number->string n))))))
     (define cps1
       (lambda (exp ctx)
         (pmatch exp
@@ -154,6 +154,7 @@
                                             (cps1 arg (lambda (x^)
                                                         (cond
                                                           [(delta-b1? x) `(,x ,x^)]
+                                                          [(eq? ctx ctx0) `(,x ,x^ k)]
                                                           [else (let ([var (new-var)])
                                                                   `(,x ,x^ (lambda (,var) ,(ctx var))))
                                                                 ])))))])))
@@ -177,3 +178,6 @@
 ; (f x (lambda (v0)
 ;        (v0 1 (lambda (v1)
 ;                v1))))
+
+(cps '(lambda (x) (x 1)))
+; '(lambda (x k) (x 1 k))
