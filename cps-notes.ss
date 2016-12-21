@@ -136,7 +136,6 @@
 (define delta-b1?
   (lambda (x) (memq x `(add1 sub1 zero?))))
 
-
 (define cps
   (lambda (exp)
     (define new-var
@@ -153,6 +152,7 @@
                 [`(,func ,arg) (cps1 func (lambda (x)
                                             (cps1 arg (lambda (x^)
                                                         (cond
+                                                          ; applications of primitive operations need no lifting
                                                           [(delta-b1? x) `(,x ,x^)]
                                                           [(eq? ctx ctx0) `(,x ,x^ k)]
                                                           [else (let ([var (new-var)])
