@@ -107,7 +107,6 @@
                                                          (union (topterm `(,ta1 :> ,tb1)) (shift 0 t))
                                                          (error 'teval "Inappropriate type in Fix: ~s" (toptyp t))))]
                            [else (error 'teval "Inappropriate type in Fix: ~s" (toptyp t))]))] 
-            ; t1a :> t1r
             [`(,e1 ,e2) (let ([t1 (teval env e1)] [t2 (teval env e2)])
                           (cond
                             [(Typ:>Typ? (toptyp t1)) (let ([t1a (car (toptyp t1))] [t1r (cddr (toptyp t1))])
