@@ -74,7 +74,7 @@
           (cons (cons (cons n k) v) (shift n (cdr ts)))))))
 
 ;; Type reconstruction: abstract evaluation
-;; teval :: TEnv -> Term -> Typ
+;; TEnv -> Term -> Typs
 (define teval
   (lambda (env term)
     (pmatch term
